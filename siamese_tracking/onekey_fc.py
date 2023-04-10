@@ -73,7 +73,7 @@ def main():
         elif 'VOT' in testINFO['DATA']:
             os.system('python ./lib/core/eval_vot.py {0} ./result 2>&1 | tee logs/siamfc_eval_epochs.log'.format(testINFO['DATA']))
         else:
-            raise ValueError('not supported')
+            print("CUSTOM")
 
 
     # tuning -- with TPE

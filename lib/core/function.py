@@ -16,7 +16,7 @@ from utils.utils import print_speed
 
 def siamfc_train(train_loader, model,  optimizer, epoch, cur_lr, cfg, writer_dict, logger):
     # unfix for FREEZE-OUT method
-    model, optimizer = unfix_more(model, optimizer, epoch, cfg, cur_lr, logger)
+    #model, optimizer = unfix_more(model, optimizer, epoch, cfg, cur_lr, logger)
 
     # prepare
     batch_time = AverageMeter()
@@ -45,12 +45,11 @@ def siamfc_train(train_loader, model,  optimizer, epoch, cur_lr, cfg, writer_dic
         optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm(model.parameters(), 10)  # gradient clip
-
-        if is_valid_number(loss.data[0]):
+        if is_valid_number(loss.data):
             optimizer.step()
 
         # record loss
-        loss = loss.data[0]
+        loss = loss.data
         losses.update(loss, template.size(0))
         batch_time.update(time.time() - end)
         end = time.time()
