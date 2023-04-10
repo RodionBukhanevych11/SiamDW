@@ -31,12 +31,13 @@ sample_random = random.Random()
 
 
 class SiamFCDataset(Dataset):
-    def __init__(self, cfg):
+    def __init__(self, cfg, logger):
         super(SiamFCDataset, self).__init__()
         # pair information
+        self.logger = logger
         self.template_size = cfg.SIAMFC.TRAIN.TEMPLATE_SIZE
         self.search_size = cfg.SIAMFC.TRAIN.SEARCH_SIZE
-        self.size = (self.search_size - self.template_size) // cfg.SIAMFC.TRAIN.STRIDE + 1   # from cross-correlation
+        self.size = 5#(self.search_size - self.template_size) // cfg.SIAMFC.TRAIN.STRIDE + 1   # from cross-correlation
 
         # aug information
         self.color = cfg.SIAMFC.DATASET.COLOR
@@ -63,12 +64,14 @@ class SiamFCDataset(Dataset):
             self.num_use = cfg.SIAMFC.TRAIN.PAIRS
             self.root = cfg.SIAMFC.DATASET.GOT10K.PATH
         else:
-            raise ValueError('not supported training dataset')
+            self.anno = cfg.SIAMFC.DATASET.CUSTOM_TRAIN.ANNOTATION
+            self.num_use = cfg.SIAMFC.TRAIN.PAIRS
+            self.root = cfg.SIAMFC.DATASET.CUSTOM_TRAIN.PATH
 
         self.labels = json.load(open(self.anno, 'r'))
         self.videos = list(self.labels.keys())
         self.num = len(self.videos)   # video number
-        self.frame_range = 100
+        self.frame_range = 30
         self.pick = self._shuffle()
 
     def __len__(self):
@@ -118,39 +121,36 @@ class SiamFCDataset(Dataset):
         self.pick = pick[:self.num_use]
         return self.pick
 
-    def _get_image_anno(self, video, track, frame):
+    def _get_image_path(self, video, frame):
         """
         get image and annotation
         """
-        frame = "{:06d}".format(frame)
-        image_path = join(self.root, video, "{}.{}.x.jpg".format(frame, track))
-        image_anno = self.labels[video][track][frame]
-
-        return image_path, image_anno
+        image_path = os.path.join(self.root, video, frame)
+        return image_path
 
     def _get_pairs(self, index):
         """
         get training pairs
         """
         video_name = self.videos[index]
-        video = self.labels[video_name]
-        track = random.choice(list(video.keys()))
-        track_info = video[track]
-        try:
-            frames = track_info['frames']
-        except:
-            frames = list(track_info.keys())
+        track_info = self.labels[video_name]
+        frames = track_info['image_files']
+        annots = track_info['gt_rect']
+        assert len(frames)==len(annots)
+        
+        template_frame_ind = random.randint(0, len(frames)-1)
 
-        template_frame = random.randint(0, len(frames)-1)
+        left = template_frame_ind
+        right = min(template_frame_ind + self.frame_range, len(frames)-1) + 1
+        template_frame = frames[template_frame_ind]
+        template_annot = annots[template_frame_ind]
+        search_range_inds = np.arange(left, right)
+        search_range_ind = random.choice(search_range_inds)
+        search_frame = frames[search_range_ind]
+        search_annot = annots[search_range_ind]
 
-        left = max(template_frame - self.frame_range, 0)
-        right = min(template_frame + self.frame_range, len(frames)-1) + 1
-        search_range = frames[left:right]
-        template_frame = int(frames[template_frame])
-        search_frame = int(random.choice(search_range))
-
-        return self._get_image_anno(video_name, track, template_frame), \
-               self._get_image_anno(video_name, track, search_frame)
+        return (self._get_image_path(video_name, template_frame), template_annot), \
+               (self._get_image_path(video_name, search_frame), search_annot)
 
     def _posNegRandom(self):
         """
