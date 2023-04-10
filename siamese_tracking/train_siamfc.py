@@ -66,7 +66,8 @@ def check_trainable(model, logger):
     logger.info('trainable params:')
     for name, param in model.named_parameters():
         if param.requires_grad:
-            logger.info(name)
+            #logger.info(name)
+            ...
 
     assert len(trainable_params) > 0, 'no trainable parameters'
 
@@ -114,14 +115,14 @@ def main():
     reset_config(config, args)
 
     logger, _, tb_log_dir = create_logger(config, 'SIAMFC', 'train')
-    logger.info(pprint.pformat(args))
-    logger.info(pprint.pformat(config))
+    #logger.info(pprint.pformat(args))
+    #logger.info(pprint.pformat(config))
 
     writer_dict = {
         'writer': SummaryWriter(log_dir=tb_log_dir),
         'train_global_steps': 0,
     }
-
+    '''
     # auto-download train model from GoogleDrive
     if not os.path.exists('./pretrain'):
         os.makedirs('./pretrain')
@@ -134,12 +135,12 @@ def main():
                 .format(DRIVEID[config.SIAMFC.TRAIN.MODEL], config.SIAMFC.TRAIN.PRETRAIN))
     except:
         print('auto-download pretrained model fail, please download it and put it in pretrain directory')
-
+    '''
 
     # [*] gpus parallel and model prepare
     # prepare
     model = models.__dict__[config.SIAMFC.TRAIN.MODEL]()  # build model
-    model = load_pretrain(model, './pretrain/{}'.format(config.SIAMFC.TRAIN.PRETRAIN))  # load pretrain
+    #model = load_pretrain(model, './pretrain/{}'.format(config.SIAMFC.TRAIN.PRETRAIN))  # load pretrain
     trainable_params = check_trainable(model, logger)           # print trainable params info
     optimizer = get_optimizer(config, trainable_params)         # optimizer
     lr_scheduler = lr_decay(config, optimizer)      # learning rate decay scheduler
@@ -159,7 +160,7 @@ def main():
 
     for epoch in range(config.SIAMFC.TRAIN.START_EPOCH, config.SIAMFC.TRAIN.END_EPOCH):
         # build dataloader, benefit to tracking
-        train_set = SiamFCDataset(config)
+        train_set = SiamFCDataset(config, logger)
         train_loader = DataLoader(train_set, batch_size=config.SIAMFC.TRAIN.BATCH * gpu_num, num_workers=config.WORKERS,
                                   pin_memory=True, sampler=None)
 
