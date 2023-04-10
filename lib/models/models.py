@@ -10,7 +10,7 @@
 #    4) SiamFCRes22W:Double 3*3 in the residual blob of CIResNet-22
 # Main Results: see readme.md
 # ------------------------------------------------------------------------------
-
+import torch
 from .siamfc import SiamFC_
 from .siamrpn import SiamRPN_
 from .connect import Corr_Up, RPN_Up
@@ -45,6 +45,14 @@ class SiamFCRes22W(SiamFC_):
         self.connect_model = Corr_Up()
 
 
+class SiamFCMobileNet(SiamFC_):
+    def __init__(self, **kwargs):
+        super(SiamFCMobileNet, self).__init__(**kwargs)
+        self.features = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
+        self.features = torch.nn.Sequential(*(list(self.features.children())[:-1]))
+        self.connect_model = Corr_Up()
+
+
 class SiamRPNRes22(SiamRPN_):
     def __init__(self, **kwargs):
         super(SiamRPNRes22, self).__init__(**kwargs)
@@ -59,5 +67,4 @@ class SiamRPNRes22(SiamRPN_):
                                     inchannels=inchannels,
                                     outchannels=outchannels,
                                     cls_type = self.cls_type)
-
-
+        
