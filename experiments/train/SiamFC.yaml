@@ -9,15 +9,16 @@ SIAMFC:
     ISTRUE: True   # whether to train
     MODEL: "SiamFCMobileNet"   # SiamFCIncep22, SiamFCNext22, SiamFCMobileNet
     START_EPOCH: 0
-    END_EPOCH: 50
+    END_EPOCH: 3
     TEMPLATE_SIZE: 127
     SEARCH_SIZE: 255
     STRIDE: 8
-    PAIRS: 600000
+    BATCH: 32
+    PAIRS: 600
     PRETRAIN: False
     LR_POLICY: 'log'
-    LR: 0.01
-    LR_END: 0.00001
+    LR: 0.005
+    LR_END: 0.000005
     MOMENTUM: 0.9
     WEIGHT_DECAY: 0.0001
     WHICH_USE: 'CUSTOM_TRAIN'
@@ -25,8 +26,9 @@ SIAMFC:
     ISTRUE: True  # whether to test
     THREADS: 16   # multi threads test
     DATA: 'CUSTOM_TEST'
-    START_EPOCH: 30
-    END_EPOCH: 50
+    START_EPOCH: 1
+    END_EPOCH: 3
+    BATCH: 32
   TUNE:    # TUNE model is same as TRAIN.MODEL
     ISTRUE: False  # whether to tune
     DATA: 'CUSTOM_VAL'
@@ -34,9 +36,9 @@ SIAMFC:
   DATASET:
     SHIFT: 4
     SCALE: 0.05
-    COLOR: 1
-    FLIP: 0
-    BLUR: 0
+    COLOR: 0.4
+    FLIP: 0.3
+    BLUR: 0.2
     ROTATION: 0
     CUSTOM_TRAIN:
       PATH: '/home/rodion/SiamDW/data/Dataset_UAV123_10fps/UAV123_10fps/images'

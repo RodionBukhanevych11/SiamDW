@@ -1,0 +1,51 @@
+SIAMFC:
+  GPUS: '0'
+  PRINT_FREQ: 200
+  WORKERS: 16
+  OUTPUT_DIR: 'logs'   # log file
+  CHECKPOINT_DIR: 'snapshot'   # checkpoint file
+
+  TRAIN:
+    ISTRUE: True   # whether to train
+    MODEL: "SiamFCMobileNet"   # SiamFCIncep22, SiamFCNext22, SiamFCMobileNet
+    START_EPOCH: 0
+    END_EPOCH: 40
+    TEMPLATE_SIZE: 480
+    SEARCH_SIZE: 640
+    STRIDE: 6
+    BATCH: 6
+    PAIRS: 20000
+    PRETRAIN: False
+    LR_POLICY: 'log'
+    LR: 0.005
+    LR_END: 0.000005
+    MOMENTUM: 0.9
+    WEIGHT_DECAY: 0.0001
+    WHICH_USE: 'CUSTOM_TRAIN'
+  TEST:    # TEST model is same as TRAIN.MODEL
+    ISTRUE: True  # whether to test
+    THREADS: 16   # multi threads test
+    DATA: 'CUSTOM_TEST'
+    START_EPOCH: 30
+    END_EPOCH: 40
+    BATCH: 32
+  TUNE:    # TUNE model is same as TRAIN.MODEL
+    ISTRUE: False  # whether to tune
+    DATA: 'CUSTOM_VAL'
+    METHOD: 'TPE'
+  DATASET:
+    SHIFT: 4
+    SCALE: 0.05
+    COLOR: 1
+    FLIP: 0.3
+    BLUR: 0.15
+    ROTATION: 0.1
+    CUSTOM_TRAIN:
+      PATH: '/home/rodion/SiamDW/data/archive_1/images'
+      ANNOTATION: '/home/rodion/SiamDW/data/archive_1/train.json'
+    CUSTOM_TEST:
+      PATH: '/home/rodion/SiamDW/data/archive_1/images'
+      ANNOTATION: '/home/rodion/SiamDW/data/archive_1/test.json'
+    CUSTOM_VAL:
+      PATH: '/home/rodion/SiamDW/data/archive_1/images'
+      ANNOTATION: '/home/rodion/SiamDW/data/archive_1/val.json'
