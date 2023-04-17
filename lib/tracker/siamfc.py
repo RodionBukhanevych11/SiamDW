@@ -117,7 +117,6 @@ class SiamFC(object):
         scaled_target = [[target_sz[0] * p.scales], [target_sz[1] * p.scales]]
 
         x_crops = Variable(make_scale_pyramid(im, target_pos, scaled_instance, p.instance_size, avg_chans))
-
         target_pos, new_scale = self.update(net, p.s_x, x_crops.cuda(), target_pos, window, p)
 
         # scale damping and saturation
@@ -148,10 +147,10 @@ class FCConfig(object):
     windowing = 'cosine'
     w_influence = 0.350
 
-    exemplar_size = 127
-    instance_size = 255
-    score_size = 17
-    total_stride = 8
+    exemplar_size = 480
+    instance_size = 640
+    score_size = 5
+    total_stride = 5
     context_amount = 0.5
 
     def update(self, newparam=None):
@@ -161,5 +160,5 @@ class FCConfig(object):
             self.renew()
 
     def renew(self):
-        self.exemplar_size = self.instance_size - 128
-        self.score_size = (self.instance_size - self.exemplar_size) // self.total_stride + 1
+        self.exemplar_size = self.instance_size #- 128
+        self.score_size = 6#(self.instance_size - self.exemplar_size) // self.total_stride + 1
