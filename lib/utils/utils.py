@@ -17,7 +17,7 @@ import torch
 import yaml
 import cv2
 import numpy as np
-
+import itertools
 from pathlib import Path
 from collections import namedtuple
 from shapely.geometry import Polygon, box
@@ -163,7 +163,7 @@ def generate_anchor(total_stride, scales, ratios, score_size):
 # -----------------------------------
 # Functions for benchmark and others
 # -----------------------------------
-def load_dataset(dataset):
+def load_dataset(images_path, annotation):
     """
     support OTB and VOT now
     TODO: add other datasets
@@ -198,7 +198,8 @@ def load_dataset(dataset):
             info[video] = {'image_files': image_files, 'gt': gt, 'name': video}
 
     else:
-        raise ValueError("Dataset not support now, edit for other dataset youself...")
+        ...
+        
 
     return info
 
@@ -569,3 +570,9 @@ def extract_logs(logfile, prefix):
         raise ValueError('not supported now')
 
     return 'checkpoint_e{}.pth'.format(epoch)
+
+
+def get_index_combinations(n):
+    indices = list(range(n+1))
+    combinations = list(itertools.combinations(indices, 2))
+    return combinations
