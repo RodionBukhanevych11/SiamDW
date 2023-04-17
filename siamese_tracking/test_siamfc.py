@@ -33,16 +33,16 @@ def parse_args():
     args for fc testing.
     """
     parser = argparse.ArgumentParser(description='PyTorch SiamFC Tracking Test')
-    parser.add_argument('--arch', dest='arch', default='SiamFCIncep22', help='backbone architecture')
+    parser.add_argument('--arch', dest='arch', default='SiamFCMobileNet', help='backbone architecture')
     parser.add_argument('--resume', required=True, type=str, help='pretrained model')
-    parser.add_argument('--dataset', default='VOT2017', help='dataset test')
+    parser.add_argument('--dataset', default='CUSTOM_TEST', help='dataset test')
     parser.add_argument('--epoch_test', default=False, type=bool, help='multi-gpu epoch test flag')
     args = parser.parse_args()
 
     return args
 
 
-def track(tracker, net, video, args):
+def track(tracker, net, root_path, vid_name, annot, args):
     start_frame, toc = 0, 0
 
     # save result to evaluate
@@ -56,26 +56,18 @@ def track(tracker, net, video, args):
     if not os.path.exists(tracker_path):
         os.makedirs(tracker_path)
 
-    if 'VOT' in args.dataset:
-        baseline_path = os.path.join(tracker_path, 'baseline')
-        video_path = os.path.join(baseline_path, video['name'])
-        if not os.path.exists(video_path):
-            os.makedirs(video_path)
-        result_path = os.path.join(video_path, video['name'] + '_001.txt')
-    else:
-        result_path = os.path.join(tracker_path, '{:s}.txt'.format(video['name']))
+    
+    result_path = os.path.join(tracker_path, '{:s}.txt'.format(video['name']))
 
     if os.path.exists(result_path):
         return  # for mult-gputesting
 
     regions = []
-    image_files, gt = video['image_files'], video['gt']
+    image_files, gt = video['images'], video['gt_rect']
     for f, image_file in enumerate(image_files):
+        image_file = os.path.join(root_path, vid_name, image_file)
         im = cv2.imread(image_file)
-        if len(im.shape) == 2:
-            im = cv2.cvtColor(im, cv2.COLOR_GRAY2BGR)   # align with training
-
-        tic = cv2.getTickCount()
+        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
 
         if f == start_frame:  # init
             cx, cy, w, h = get_axis_aligned_bbox(gt[f])
@@ -96,24 +88,12 @@ def track(tracker, net, video, args):
         else:
             regions.append(0)
 
-        toc += cv2.getTickCount() - tic
-
     with open(result_path, "w") as fin:
-        if 'VOT' in args.dataset:
-            for x in regions:
-                if isinstance(x, int):
-                    fin.write("{:d}\n".format(x))
-                else:
-                    p_bbox = x.copy()
-                    fin.write(','.join([str(i) for i in p_bbox]) + '\n')
-        else:
-            for x in regions:
-                p_bbox = x.copy()
-                fin.write(
-                    ','.join([str(i + 1) if idx == 0 or idx == 1 else str(i) for idx, i in enumerate(p_bbox)]) + '\n')
+        for x in regions:
+            p_bbox = x.copy()
+            fin.write(
+                ','.join([str(i + 1) if idx == 0 or idx == 1 else str(i) for idx, i in enumerate(p_bbox)]) + '\n')
 
-    toc /= cv2.getTickFrequency()
-    print('Video: {:12s} Time: {:2.1f}s Speed: {:3.1f}fps'.format(video['name'], toc, f / toc))
 
 
 def main():
@@ -126,8 +106,8 @@ def main():
     net = net.cuda()
 
     # prepare video
-    dataset = load_dataset(args.dataset)
-    video_keys = list(dataset.keys()).copy()
+    
+    vid_names = list(dataset.keys()).copy()
 
     # prepare tracker
     info = edict()
@@ -137,9 +117,8 @@ def main():
     tracker = SiamFC(info)
 
     # tracking all videos in benchmark
-    for video in video_keys:
+    for vid_name in vid_names:
         track(tracker, net, dataset[video], args)
-
 
 # --------------------------------------------------------------------------
 # The next few functions are utilized for tuning hyper-parameters

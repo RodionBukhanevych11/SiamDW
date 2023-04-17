@@ -12,11 +12,12 @@ import shutil
 import time
 import math
 import pprint
+import torch
 import argparse
 import numpy as np
 from tensorboardX import SummaryWriter
 
-import torch
+from easydict import EasyDict as edict
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ExponentialLR, CosineAnnealingLR, ReduceLROnPlateau
@@ -26,6 +27,8 @@ from utils.utils import create_logger, print_speed, load_pretrain, restore_from,
 from dataset.siamfc import SiamFCDataset
 from core.config import config, update_config
 from core.function import siamfc_train
+from tracker.siamfc import SiamFC
+from core.eval_custom import eval_dataset
 
 eps = 1e-5
 def parse_args():
@@ -66,8 +69,7 @@ def check_trainable(model, logger):
     logger.info('trainable params:')
     for name, param in model.named_parameters():
         if param.requires_grad:
-            #logger.info(name)
-            ...
+            continue
 
     assert len(trainable_params) > 0, 'no trainable parameters'
 
@@ -86,7 +88,7 @@ def get_optimizer(cfg, trainable_params):
     return optimizer
 
 
-def lr_decay(cfg, optimizer):
+def lr_decay(cfg, optimizer, args):
     if cfg.SIAMFC.TRAIN.LR_POLICY == 'exp':
         scheduler = ExponentialLR(optimizer, gamma=0.8685)
     elif cfg.SIAMFC.TRAIN.LR_POLICY == 'cos':
@@ -122,20 +124,6 @@ def main():
         'writer': SummaryWriter(log_dir=tb_log_dir),
         'train_global_steps': 0,
     }
-    '''
-    # auto-download train model from GoogleDrive
-    if not os.path.exists('./pretrain'):
-        os.makedirs('./pretrain')
-    try:
-        DRIVEID = pretrain_zoo()
-
-        if not os.path.exists('./pretrain/{}'.format(config.SIAMFC.TRAIN.PRETRAIN)):
-            os.system(
-                'wget --no-check-certificate \'https://drive.google.com/uc?export=download&id={0}\' -O ./pretrain/{1}'
-                .format(DRIVEID[config.SIAMFC.TRAIN.MODEL], config.SIAMFC.TRAIN.PRETRAIN))
-    except:
-        print('auto-download pretrained model fail, please download it and put it in pretrain directory')
-    '''
 
     # [*] gpus parallel and model prepare
     # prepare
@@ -143,7 +131,7 @@ def main():
     #model = load_pretrain(model, './pretrain/{}'.format(config.SIAMFC.TRAIN.PRETRAIN))  # load pretrain
     trainable_params = check_trainable(model, logger)           # print trainable params info
     optimizer = get_optimizer(config, trainable_params)         # optimizer
-    lr_scheduler = lr_decay(config, optimizer)      # learning rate decay scheduler
+    lr_scheduler = lr_decay(config, optimizer, args)      # learning rate decay scheduler
 
     if config.SIAMFC.TRAIN.RESUME and config.SIAMFC.TRAIN.START_EPOCH != 0:   # resume
         model.features.unfix((config.SIAMFC.TRAIN.START_EPOCH - 1) / config.SIAMFC.TRAIN.END_EPOCH)
@@ -153,11 +141,15 @@ def main():
     gpus = [int(i) for i in config.GPUS.split(',')]
     gpu_num = len(gpus)
     logger.info('GPU NUM: {:2d}'.format(len(gpus)))
+    model = model.to('cuda:0')
     model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
     logger.info('model prepare done')
-
+    info = edict()
+    info.arch = config.SIAMFC.TRAIN.MODEL
+    info.epoch_test = True
     # [*] train
-
+    best_precision = 0
+    #tracker = SiamFC(info)
     for epoch in range(config.SIAMFC.TRAIN.START_EPOCH, config.SIAMFC.TRAIN.END_EPOCH):
         # build dataloader, benefit to tracking
         train_set = SiamFCDataset(config, logger)
@@ -172,9 +164,22 @@ def main():
             lr_scheduler.step()
 
         model, writer_dict = siamfc_train(train_loader, model, optimizer, epoch + 1, curLR, config, writer_dict, logger)
-
+        #test_net = model.cuda()
+        '''
+        mean_precision_value, writer_dict = eval_dataset(
+            config,
+            config.SIAMFC.DATASET.CUSTOM_VAL.ANNOTATION,
+            config.SIAMFC.DATASET.CUSTOM_VAL.PATH,
+            tracker,
+            model,
+            logger
+        )
         # save model
+        if mean_precision_value >= best_precision:
+            best_precision = mean_precision_value
+        '''
         save_model(model, epoch, optimizer, config.SIAMFC.TRAIN.MODEL, config, isbest=False)
+        
 
     writer_dict['writer'].close()
 

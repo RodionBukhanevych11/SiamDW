@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------------------
 
 import _init_paths
-import os
+import os, time
 import cv2
 import random
 import argparse
@@ -28,9 +28,9 @@ def parse_args():
     args for fc testing.
     """
     parser = argparse.ArgumentParser(description='PyTorch SiamFC Tracking Test')
-    parser.add_argument('--arch', default='SiamRPNRes22', type=str, help='backbone architecture')
-    parser.add_argument('--resume', default='/data/zpzhang/project4/siamese/Siamese/snapshot/CIResNet22RPN.model', type=str, help='pretrained model')
-    parser.add_argument('--video', default='/data/zpzhang/project4/siamese/Siamese/videos/bag.mp4', type=str, help='video file path')
+    parser.add_argument('--arch', default='SiamFCMobileNet', type=str, help='backbone architecture')
+    parser.add_argument('--resume', default='/home/rodion/SiamDW/snapshot/checkpoint_e10.pth', type=str, help='pretrained model')
+    parser.add_argument('--video', default='/home/rodion/SiamDW/tests/full.mkv', type=str, help='video file path')
     parser.add_argument('--init_bbox', default=None, help='bbox in the first frame None or [lx, ly, w, h]')
     args = parser.parse_args()
 
@@ -43,9 +43,10 @@ def track_video(tracker, model, video_path, init_box=None):
 
     cap = cv2.VideoCapture(video_path)
     display_name = 'Video: {}'.format(video_path.split('/')[-1])
-    cv2.namedWindow(display_name, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-    cv2.resizeWindow(display_name, 960, 720)
+    #cv2.namedWindow(display_name, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+    #cv2.resizeWindow(display_name, 960, 720)
     success, frame = cap.read()
+    print("START")
     cv2.imshow(display_name, frame)
 
     if success is not True:
@@ -83,7 +84,10 @@ def track_video(tracker, model, video_path, init_box=None):
         frame_disp = frame.copy()
 
         # Draw box
+        start = time.time()
         state = tracker.track(state, frame_disp)  # track
+        end = time.time()
+        print("Frame inference time = ",end - start)
         location = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
         x1, y1, x2, y2 = int(location[0]), int(location[1]), int(location[0] + location[2]), int(location[1] + location[3])
 
