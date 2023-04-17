@@ -38,7 +38,6 @@ class SiamFCDataset(Dataset):
         self.template_size = cfg.SIAMFC.TRAIN.TEMPLATE_SIZE
         self.search_size = cfg.SIAMFC.TRAIN.SEARCH_SIZE
         self.size = 5#(self.search_size - self.template_size) // cfg.SIAMFC.TRAIN.STRIDE + 1   # from cross-correlation
-
         # aug information
         self.color = cfg.SIAMFC.DATASET.COLOR
         self.flip = cfg.SIAMFC.DATASET.FLIP
@@ -55,18 +54,9 @@ class SiamFCDataset(Dataset):
         )
 
         # train data information
-        if cfg.SIAMFC.TRAIN.WHICH_USE == 'VID':
-            self.anno = cfg.SIAMFC.DATASET.VID.ANNOTATION
-            self.num_use = cfg.SIAMFC.TRAIN.PAIRS
-            self.root = cfg.SIAMFC.DATASET.VID.PATH
-        elif cfg.SIAMFC.TRAIN.WHICH_USE == 'GOT10K':
-            self.anno = cfg.SIAMFC.DATASET.GOT10K.ANNOTATION
-            self.num_use = cfg.SIAMFC.TRAIN.PAIRS
-            self.root = cfg.SIAMFC.DATASET.GOT10K.PATH
-        else:
-            self.anno = cfg.SIAMFC.DATASET.CUSTOM_TRAIN.ANNOTATION
-            self.num_use = cfg.SIAMFC.TRAIN.PAIRS
-            self.root = cfg.SIAMFC.DATASET.CUSTOM_TRAIN.PATH
+        self.anno = cfg.SIAMFC.DATASET.CUSTOM_TRAIN.ANNOTATION
+        self.num_use = cfg.SIAMFC.TRAIN.PAIRS
+        self.root = cfg.SIAMFC.DATASET.CUSTOM_TRAIN.PATH
 
         self.labels = json.load(open(self.anno, 'r'))
         self.videos = list(self.labels.keys())
@@ -85,7 +75,10 @@ class SiamFCDataset(Dataset):
         template, search = self._get_pairs(index)
 
         template_image = cv2.imread(template[0])
+        template_image = cv2.cvtColor(template_image, cv2.COLOR_BGR2RGB)
+        
         search_image = cv2.imread(search[0])
+        search_image = cv2.cvtColor(search_image, cv2.COLOR_BGR2RGB)
 
         template_box = self._toBBox(template_image, template[1])
         search_box = self._toBBox(search_image, search[1])
