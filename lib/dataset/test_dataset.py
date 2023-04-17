@@ -8,7 +8,6 @@
 
 
 from __future__ import division
-
 import cv2
 import json
 import torch
@@ -52,8 +51,8 @@ class SiamFCTestDataset(Dataset):
         self.image_files = self.vid_annot['image_files']
         self.gt_rects = self.vid_annot['gt_rect']
         assert len(self.image_files)==len(self.gt_rects)
-        self.indexs_combination = get_index_combinations(len(self.image_files))
-
+        self.indexs_combination = get_index_combinations(len(self.image_files),3)
+        
     def __len__(self):
         return len(self.indexs_combination)
     
@@ -88,23 +87,25 @@ class SiamFCTestDataset(Dataset):
             os.path.join(self.root, self.image_files[pair_inds[0]]),
             self.gt_rects[pair_inds[0]]
         )
-        search = (
-            os.path.join(self.root, self.image_files[pair_inds[1]]),
-            self.gt_rects[pair_inds[1]]
-        )
-
         template_image = cv2.imread(template[0])
         template_image = cv2.cvtColor(template_image, cv2.COLOR_BGR2RGB)
-        
-        search_image = cv2.imread(search[0])
-        search_image = cv2.cvtColor(search_image, cv2.COLOR_BGR2RGB)
-        
         template_box = template[1]
         template_pos = [(template_box[2]+template_box[0])/2, (template_box[3]+template_box[1])/2]
         template_sz = [template_box[2] - template_box[0], template_box[3]- template_box[1]]
-        search[1][2], search[1][3] = search[1][2] - search[1][0], search[1][3] - search[1][1]
         template_pos, template_sz = self._get_pos_sz(template_box)
+        
+        search_inds = pair_inds[1:]
+        search_images, search_bboxes = [], []
+        for search_ind in search_inds:
+            search_image = os.path.join(self.root, self.image_files[search_ind])
+            search_bbox = self.gt_rects[search_ind]
+            search_image = cv2.imread(search_image)
+            search_image = cv2.cvtColor(search_image, cv2.COLOR_BGR2RGB)
+            search_pos_sz = search_bbox.copy()
+            search_images.append(search_image)
+            search_bboxes.append(search_pos_sz)
+        search_images = np.array(search_images)
+        search_bboxes = np.array(search_bboxes)
 
-        return pair_inds, (template_pos, template_sz, template_image), \
-                (search[1], search_image)
+        return template_pos, template_sz, template_image, search_images, search_bboxes
     

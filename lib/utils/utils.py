@@ -19,6 +19,7 @@ import cv2
 import numpy as np
 import itertools
 from pathlib import Path
+from collections import defaultdict
 from collections import namedtuple
 from shapely.geometry import Polygon, box
 from os.path import join, realpath, dirname, exists
@@ -528,15 +529,12 @@ def save_model(model, epoch, optimizer, model_name, cfg, isbest=False):
     if not exists(cfg.CHECKPOINT_DIR):
         os.makedirs(cfg.CHECKPOINT_DIR)
 
-    if epoch > 4:
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': model_name,
-            'state_dict': model.module.state_dict(),
-            'optimizer': optimizer.state_dict()
-        }, isbest, cfg.CHECKPOINT_DIR, 'checkpoint_e%d.pth' % (epoch + 1))
-    else:
-        print('epoch not save(<5)')
+    save_checkpoint({
+        'epoch': epoch + 1,
+        'arch': model_name,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }, isbest, cfg.CHECKPOINT_DIR, 'checkpoint_e%d.pth' % (epoch + 1))
 
 def extract_eaos(lines):
     """
@@ -572,7 +570,35 @@ def extract_logs(logfile, prefix):
     return 'checkpoint_e{}.pth'.format(epoch)
 
 
-def get_index_combinations(n):
-    indices = list(range(n+1))
+def find_combs(pairs):
+    mapp = defaultdict(list)
+    for x, y in pairs:
+        mapp[x].append(y)
+    return [(x, *y) for x, y in mapp.items()]
+
+
+def get_index_combinations(n, every_n):
+    indices = list(range(n))
+    indices = indices[0::every_n]
     combinations = list(itertools.combinations(indices, 2))
+    combinations = find_combs(combinations)
     return combinations
+
+
+def iou_batch(bb_test: np.ndarray, bb_gt: np.ndarray) -> np.ndarray:
+    bb_gt = np.expand_dims(bb_gt, 0)
+    bb_test = np.expand_dims(bb_test, 1)
+
+    xx1 = np.maximum(bb_test[..., 0], bb_gt[..., 0])
+    yy1 = np.maximum(bb_test[..., 1], bb_gt[..., 1])
+    xx2 = np.minimum(bb_test[..., 2], bb_gt[..., 2])
+    yy2 = np.minimum(bb_test[..., 3], bb_gt[..., 3])
+    w = np.maximum(0.0, xx2 - xx1)
+    h = np.maximum(0.0, yy2 - yy1)
+    wh = w * h
+    o = wh / (
+        (bb_test[..., 2] - bb_test[..., 0]) * (bb_test[..., 3] - bb_test[..., 1])
+        + (bb_gt[..., 2] - bb_gt[..., 0]) * (bb_gt[..., 3] - bb_gt[..., 1])
+        - wh
+    )
+    return o

@@ -142,14 +142,14 @@ def main():
     gpu_num = len(gpus)
     logger.info('GPU NUM: {:2d}'.format(len(gpus)))
     model = model.to('cuda:0')
-    model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
+    #model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
     logger.info('model prepare done')
     info = edict()
     info.arch = config.SIAMFC.TRAIN.MODEL
     info.epoch_test = True
     # [*] train
     best_precision = 0
-    #tracker = SiamFC(info)
+    tracker = SiamFC(info)
     for epoch in range(config.SIAMFC.TRAIN.START_EPOCH, config.SIAMFC.TRAIN.END_EPOCH):
         # build dataloader, benefit to tracking
         train_set = SiamFCDataset(config, logger)
@@ -164,9 +164,7 @@ def main():
             lr_scheduler.step()
 
         model, writer_dict = siamfc_train(train_loader, model, optimizer, epoch + 1, curLR, config, writer_dict, logger)
-        #test_net = model.cuda()
-        '''
-        mean_precision_value, writer_dict = eval_dataset(
+        mean_precision_value = eval_dataset(
             config,
             config.SIAMFC.DATASET.CUSTOM_VAL.ANNOTATION,
             config.SIAMFC.DATASET.CUSTOM_VAL.PATH,
@@ -177,8 +175,7 @@ def main():
         # save model
         if mean_precision_value >= best_precision:
             best_precision = mean_precision_value
-        '''
-        save_model(model, epoch, optimizer, config.SIAMFC.TRAIN.MODEL, config, isbest=False)
+            save_model(model, epoch, optimizer, config.SIAMFC.TRAIN.MODEL, config, isbest=False)
         
 
     writer_dict['writer'].close()

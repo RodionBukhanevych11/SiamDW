@@ -1,6 +1,6 @@
 SIAMFC:
   GPUS: '0'
-  PRINT_FREQ: 200
+  PRINT_FREQ: 10
   WORKERS: 16
   OUTPUT_DIR: 'logs'   # log file
   CHECKPOINT_DIR: 'snapshot'   # checkpoint file
@@ -14,7 +14,7 @@ SIAMFC:
     SEARCH_SIZE: 640
     STRIDE: 6
     BATCH: 6
-    PAIRS: 20000
+    PAIRS: 50
     PRETRAIN: False
     LR_POLICY: 'log'
     LR: 0.005
