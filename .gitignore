@@ -49,6 +49,8 @@ coverage.xml
 *.pth
 *.npy
 *.mkv
+*.mp4
+*.zip
 
 # Sphinx documentation
 docs/_build/

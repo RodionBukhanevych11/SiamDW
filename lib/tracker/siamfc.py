@@ -147,8 +147,8 @@ class FCConfig(object):
     windowing = 'cosine'
     w_influence = 0.350
 
-    exemplar_size = 480
-    instance_size = 640
+    exemplar_size = 380
+    instance_size = 540
     score_size = 5
     total_stride = 5
     context_amount = 0.5

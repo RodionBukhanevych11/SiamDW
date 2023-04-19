@@ -11,6 +11,7 @@
 # Main Results: see readme.md
 # ------------------------------------------------------------------------------
 import torch
+import torchvision.models as models   
 from .siamfc import SiamFC_
 from .siamrpn import SiamRPN_
 from .connect import Corr_Up, RPN_Up
@@ -48,7 +49,7 @@ class SiamFCRes22W(SiamFC_):
 class SiamFCMobileNet(SiamFC_):
     def __init__(self, **kwargs):
         super(SiamFCMobileNet, self).__init__(**kwargs)
-        self.features = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
+        self.features = models.mobilenet_v2(pretrained=False, width_mult = 0.25)
         self.features = torch.nn.Sequential(*(list(self.features.children())[:-1]))
         self.connect_model = Corr_Up()
 

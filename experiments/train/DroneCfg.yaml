@@ -1,7 +1,7 @@
 SIAMFC:
   GPUS: '0'
-  PRINT_FREQ: 10
-  WORKERS: 16
+  PRINT_FREQ: 20
+  WORKERS: 4
   OUTPUT_DIR: 'logs'   # log file
   CHECKPOINT_DIR: 'snapshot'   # checkpoint file
 
@@ -10,11 +10,11 @@ SIAMFC:
     MODEL: "SiamFCMobileNet"   # SiamFCIncep22, SiamFCNext22, SiamFCMobileNet
     START_EPOCH: 0
     END_EPOCH: 40
-    TEMPLATE_SIZE: 480
-    SEARCH_SIZE: 640
+    TEMPLATE_SIZE: 380
+    SEARCH_SIZE: 540
     STRIDE: 6
-    BATCH: 6
-    PAIRS: 50
+    BATCH: 5
+    PAIRS: 100
     PRETRAIN: False
     LR_POLICY: 'log'
     LR: 0.005

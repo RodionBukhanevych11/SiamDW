@@ -29,7 +29,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='PyTorch SiamFC Tracking Test')
     parser.add_argument('--arch', default='SiamFCMobileNet', type=str, help='backbone architecture')
-    parser.add_argument('--resume', default='/home/rodion/SiamDW/snapshot/checkpoint_e10.pth', type=str, help='pretrained model')
+    parser.add_argument('--resume', default='/home/rodion/SiamDW/snapshot/checkpoint_e14.pth', type=str, help='pretrained model')
     parser.add_argument('--video', default='/home/rodion/SiamDW/tests/full.mkv', type=str, help='video file path')
     parser.add_argument('--init_bbox', default=None, help='bbox in the first frame None or [lx, ly, w, h]')
     args = parser.parse_args()
@@ -43,8 +43,6 @@ def track_video(tracker, model, video_path, init_box=None):
 
     cap = cv2.VideoCapture(video_path)
     display_name = 'Video: {}'.format(video_path.split('/')[-1])
-    #cv2.namedWindow(display_name, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-    #cv2.resizeWindow(display_name, 960, 720)
     success, frame = cap.read()
     print("START")
     cv2.imshow(display_name, frame)
