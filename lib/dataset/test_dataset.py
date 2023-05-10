@@ -51,10 +51,10 @@ class SiamFCTestDataset(Dataset):
         self.image_files = self.vid_annot['image_files']
         self.gt_rects = self.vid_annot['gt_rect']
         assert len(self.image_files)==len(self.gt_rects)
-        self.indexs_combination = get_index_combinations(len(self.image_files),3)
+        self.indexs_combination = [np.arange(len(self.gt_rects))]
         
     def __len__(self):
-        return len(self.indexs_combination)
+        return 1
     
     def _get_pos_sz(self, bbox):
         lx, ly = bbox[0], bbox[1]
@@ -83,6 +83,7 @@ class SiamFCTestDataset(Dataset):
 
     def __getitem__(self, index):
         pair_inds = self.indexs_combination[index]
+        
         template = (
             os.path.join(self.root, self.image_files[pair_inds[0]]),
             self.gt_rects[pair_inds[0]]
