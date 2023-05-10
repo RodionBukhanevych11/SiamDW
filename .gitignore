@@ -48,6 +48,7 @@ coverage.xml
 *.pot
 *.pth
 *.npy
+*.jpg
 *.mkv
 *.mp4
 *.zip
@@ -56,3 +57,7 @@ coverage.xml
 docs/_build/
 data/
 logs/
+siam_cls/.neptune/
+siam_cls/src/.neptune/
+
+.gitignore
