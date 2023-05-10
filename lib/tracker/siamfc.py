@@ -147,10 +147,10 @@ class FCConfig(object):
     windowing = 'cosine'
     w_influence = 0.350
 
-    exemplar_size = 380
-    instance_size = 540
+    exemplar_size = 352
+    instance_size = 480
     score_size = 5
-    total_stride = 5
+    total_stride = 8
     context_amount = 0.5
 
     def update(self, newparam=None):
@@ -161,4 +161,4 @@ class FCConfig(object):
 
     def renew(self):
         self.exemplar_size = self.instance_size #- 128
-        self.score_size = 6#(self.instance_size - self.exemplar_size) // self.total_stride + 1
+        self.score_size = 5#(self.instance_size - self.exemplar_size) // self.total_stride + 1
