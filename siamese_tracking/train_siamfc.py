@@ -128,7 +128,7 @@ def main():
     # [*] gpus parallel and model prepare
     # prepare
     model = models.__dict__[config.SIAMFC.TRAIN.MODEL]()  # build model
-    #model = load_pretrain(model, './pretrain/{}'.format(config.SIAMFC.TRAIN.PRETRAIN))  # load pretrain
+    model = load_pretrain(model, "/home/rodion/SiamDW/test_models/480_360/checkpoint_e3.pth")  # load pretrain
     trainable_params = check_trainable(model, logger)           # print trainable params info
     optimizer = get_optimizer(config, trainable_params)         # optimizer
     lr_scheduler = lr_decay(config, optimizer, args)      # learning rate decay scheduler
@@ -175,9 +175,10 @@ def main():
         # save model
         if mean_precision_value >= best_precision:
             best_precision = mean_precision_value
-            save_model(model, epoch, optimizer, config.SIAMFC.TRAIN.MODEL, config, isbest=False)
         
-
+        save_model(model, epoch, optimizer, config.SIAMFC.TRAIN.MODEL, config, isbest=False)
+        
+    logger.info(f"\nbest_precision = {best_precision}\n")
     writer_dict['writer'].close()
 
 
