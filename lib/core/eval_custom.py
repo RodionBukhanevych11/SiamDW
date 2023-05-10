@@ -52,21 +52,19 @@ def iou_lists(gt_bbs, result_bbs):
     return iou_list
 
 
-def compute_overlap_success(gt_bb, result_bb, metrics: dict, logger):
-    thresholds_overlap = np.arange(0, 1.05, 0.05)
-    iou_list = iou_lists(gt_bb, result_bb)
-    assert len(iou_list) == len(gt_bb)
-    for i in range(len(iou_list)):
-        success_overlap = len([x for x in thresholds_overlap if x < iou_list[i]])
-        error_overlap = len(thresholds_overlap) - success_overlap
-        metrics['tp'] += success_overlap
-        metrics['fp'] += error_overlap
+def compute_overlap_success(gt_bbs, result_bbs, metrics: dict, logger):
+    for i in range(len(gt_bbs)):
+        gt_bb = gt_bbs[i]
+        res_bb = result_bbs[i]
+        res_center = (res_bb[0]+res_bb[2])//2, (res_bb[1]+res_bb[3])//2
+        cntr_in_bbox = gt_bb[0]<=res_center[0]<=gt_bb[1] and gt_bb[1]<=res_center[1]<=gt_bb[3]
+        if cntr_in_bbox:
+            metrics['tp'] += 1
+        else:
+            metrics['fp'] += 1
         
     return metrics
 
-
-"""search_images = torch.Size([1, 13, 720, 1280, 3]) = torch.Size([1, 13, 4])
-search_images = torch.Size([1, 12, 720, 1280, 3]) = torch.Size([1, 12, 4])"""
 
 def eval_vid(
     config, 
@@ -81,18 +79,17 @@ def eval_vid(
     vid_loader = DataLoader(vid_set, batch_size=1, num_workers=config.WORKERS,
                                   pin_memory=True, sampler=None)
     metrics = {'tp':0, 'fp':0}
-    for data in tqdm(vid_loader):
-        
+    for data in vid_loader:
         template_pos, template_sz, template_image, search_images, search_bboxes = data
         template_pos, template_sz = template_pos[0].numpy(), template_sz[0].numpy()
         template_image = template_image[0].numpy()
         search_images, target_bboxes = search_images[0].numpy(), search_bboxes[0].numpy()
         predict_bboxes = []
-        state_template = tracker.init(
+        state_pred = tracker.init(
                 template_image, template_pos, template_sz, model
             )
         for search_im in search_images:
-            state_pred = tracker.track(state_template, search_im)
+            state_pred = tracker.track(state_pred, search_im)
             pred_location = cxy_wh_2_rect(state_pred['target_pos'], state_pred['target_sz'])   
             pred_location[2], pred_location[3] = pred_location[2] + pred_location[0], pred_location[3] + pred_location[1] 
             predict_bboxes.append(pred_location)
@@ -118,7 +115,7 @@ def eval_dataset(
     vids_names = list(labels.keys())
     per_vid_precision = {}
     mean_precision = {'tp':0,'fp':0}
-    for vid_name in tqdm(vids_names[:2]):
+    for vid_name in tqdm(vids_names[:]):
         vid_metrics = eval_vid(
             config, 
             tracker,
