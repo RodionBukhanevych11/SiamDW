@@ -37,8 +37,7 @@ class SiamFCDataset(Dataset):
         self.logger = logger
         self.template_size = cfg.SIAMFC.TRAIN.TEMPLATE_SIZE
         self.search_size = cfg.SIAMFC.TRAIN.SEARCH_SIZE
-        self.size = 5#(self.search_size - self.template_size) // cfg.SIAMFC.TRAIN.STRIDE + 1   # from cross-correlation
-        # aug information
+        self.size = 5#(self.search_size - self.template_size) // cfg.SIAMFC.TRAIN.STRIDE + 1   # from cross-correlation#5
         self.color = cfg.SIAMFC.DATASET.COLOR
         self.flip = cfg.SIAMFC.DATASET.FLIP
         self.rotation = cfg.SIAMFC.DATASET.ROTATION
@@ -50,7 +49,6 @@ class SiamFCDataset(Dataset):
             [transforms.ToPILImage(), ] +
             ([transforms.ColorJitter(0.05, 0.05, 0.05, 0.05), ] if self.color > random.random() else [])
             + ([transforms.RandomHorizontalFlip(), ] if self.flip > random.random() else [])
-            + ([transforms.RandomRotation(degrees=10), ] if self.rotation > random.random() else [])
         )
 
         # train data information
@@ -60,90 +58,53 @@ class SiamFCDataset(Dataset):
 
         self.labels = json.load(open(self.anno, 'r'))
         self.videos = list(self.labels.keys())
-        self.num = len(self.videos)   # video number
-        self.frame_range = 30
-        self.pick = self._shuffle()
+        self.vid_num = len(self.videos)   # video number
+        self.all_pairs = []
+        for vid_name in self.videos:
+            vid_images = self.labels[vid_name]['image_files']
+            gt_rects = self.labels[vid_name]['gt_rect']
+            assert len(vid_images)==len(gt_rects)
+            inds = np.arange(len(gt_rects))
+            pairs_inds = [(i,i+1) for i in inds[:-1]]
+            for pairs in pairs_inds:
+                template_im_path = os.path.join(self.root, vid_name, vid_images[pairs[0]])
+                template_bbox = gt_rects[pairs[0]]
+                search_im_path = os.path.join(self.root, vid_name, vid_images[pairs[1]])
+                search_bbox = gt_rects[pairs[1]]
+                self.all_pairs.append((template_im_path, template_bbox, search_im_path, search_bbox))
+        random.shuffle(self.all_pairs)
+        self.logger.info(f"LEN DATASET {len(self.all_pairs)}")
 
     def __len__(self):
-        return self.num_use
+        return len(self.all_pairs)
 
     def __getitem__(self, index):
         """
         pick a vodeo/frame --> pairs --> data aug --> label
         """
-        index = self.pick[index]
-        template, search = self._get_pairs(index)
+        template_im_path, template_bbox, search_im_path, search_bbox = self.all_pairs[index]
 
-        template_image = cv2.imread(template[0])
+        template_image = cv2.imread(template_im_path)
         template_image = cv2.cvtColor(template_image, cv2.COLOR_BGR2RGB)
         
-        search_image = cv2.imread(search[0])
+        search_image = cv2.imread(search_im_path)
         search_image = cv2.cvtColor(search_image, cv2.COLOR_BGR2RGB)
 
-        template_box = self._toBBox(template_image, template[1])
-        search_box = self._toBBox(search_image, search[1])
-
-        template, _, _ = self._augmentation(template_image, template_box, self.template_size)
-        search, bbox, dag_param = self._augmentation(search_image, search_box, self.search_size)
+        template, template_bbox, _ = self._augmentation(template_image, template_bbox, self.template_size)
+        search, search_bbox, dag_param = self._augmentation(search_image, search_bbox, self.search_size)
+        out_label = self.create_image_grid((self.template_size, self.template_size), search_bbox, self.size)
+        
+        template_bbox = self._toBBox(template_image, template_bbox)
+        search_bbox = self._toBBox(search_image, search_bbox)
 
         # from PIL image to numpy
         template = np.array(template)
         search = np.array(search)
-
-        out_label = self._dynamic_label([self.size, self.size], dag_param.shift)
+        #out_label = self._dynamic_label([self.size, self.size], dag_param.shift)
 
         template, search = map(lambda x: np.transpose(x, (2, 0, 1)).astype(np.float32), [template, search])
 
-        return template, search, out_label, np.array(bbox, np.float32)  # self.label 15*15/17*17
-
-    # ------------------------------------
-    # function groups for selecting pairs
-    # ------------------------------------
-    def _shuffle(self):
-        """
-        shuffel to get random pairs index
-        """
-        lists = list(range(0, self.num))
-        m = 0
-        pick = []
-        while m < self.num_use:
-            sample_random.shuffle(lists)
-            pick += lists
-            m += self.num
-
-        self.pick = pick[:self.num_use]
-        return self.pick
-
-    def _get_image_path(self, video, frame):
-        """
-        get image and annotation
-        """
-        image_path = os.path.join(self.root, video, frame)
-        return image_path
-
-    def _get_pairs(self, index):
-        """
-        get training pairs
-        """
-        video_name = self.videos[index]
-        track_info = self.labels[video_name]
-        frames = track_info['image_files']
-        annots = track_info['gt_rect']
-        assert len(frames)==len(annots)
-        
-        template_frame_ind = random.randint(0, len(frames)-1)
-
-        left = template_frame_ind
-        right = min(template_frame_ind + self.frame_range, len(frames)-1) + 1
-        template_frame = frames[template_frame_ind]
-        template_annot = annots[template_frame_ind]
-        search_range_inds = np.arange(left, right)
-        search_range_ind = random.choice(search_range_inds)
-        search_frame = frames[search_range_ind]
-        search_annot = annots[search_range_ind]
-
-        return (self._get_image_path(video_name, template_frame), template_annot), \
-               (self._get_image_path(video_name, search_frame), search_annot)
+        return template, search, out_label, np.array(search_bbox, np.float32)
 
     def _posNegRandom(self):
         """
@@ -202,31 +163,28 @@ class SiamFCDataset(Dataset):
         data augmentation for input pairs
         """
         shape = image.shape
-        crop_bbox = center2corner((shape[0] // 2, shape[1] // 2, size, size))
         param = edict()
 
         param.shift = (self._posNegRandom() * self.shift, self._posNegRandom() * self.shift)   # shift
         param.scale = ((1.0 + self._posNegRandom() * self.scale), (1.0 + self._posNegRandom() * self.scale))  # scale change
-
-        crop_bbox, _ = aug_apply(Corner(*crop_bbox), param, shape)
-
-        x1, y1 = crop_bbox.x1, crop_bbox.y1
-        bbox = BBox(bbox.x1 - x1, bbox.y1 - y1, bbox.x2 - x1, bbox.y2 - y1)
-
-        scale_x, scale_y = param.scale
-        bbox = Corner(bbox.x1 / scale_x, bbox.y1 / scale_y, bbox.x2 / scale_x, bbox.y2 / scale_y)
-
-        image = self._crop_hwc(image, crop_bbox, size)   # shift and scale
+        img_size = np.array(image.shape[:2])
+        image = cv2.resize(image, (size, size))
+        new_img_size = np.array(image.shape[:2])
+        ratio = new_img_size / img_size
+        bbox[0]*=ratio[1]
+        bbox[2]*=ratio[1]
+        bbox[1]*=ratio[0]
+        bbox[3]*=ratio[0]
 
         if self.blur > random.random():
             image = gaussian_filter(image, sigma=(1, 1, 0))
 
-        image = self.transform_extra(image)        # other data augmentation
+        image = self.transform_extra(image) # other data augmentation
         return image, bbox, param
 
     # ------------------------------------
     # function for creating training label
-    # ------------------------------------
+    # ------------------------------------ 
     def _dynamic_label(self, fixedLabelSize, c_shift, rPos=2, rNeg=0):
         if isinstance(fixedLabelSize, int):
             fixedLabelSize = [fixedLabelSize, fixedLabelSize]
@@ -257,5 +215,30 @@ class SiamFCDataset(Dataset):
                                   0.5 * np.ones_like(y),
                                   np.zeros_like(y)))
         return label
+    
+    def create_image_grid(self, image_size, bbox, n):
+        image_height, image_width = image_size[0], image_size[1]
+        x_partition_size = image_width / n
+        y_partition_size = image_height / n
+
+        # get the x and y coordinates of the bbox in the image
+        bbox_x1, bbox_y1, bbox_w, bbox_h = bbox
+        bbox_x2, bbox_y2 = bbox_x1 + bbox_w/n, bbox_y1 + bbox_h/n
+
+        # create a numpy array to store the results
+        output_grid = np.zeros((n, n))
+
+        # create a meshgrid of x and y coordinates
+        x, y = np.meshgrid(np.arange(n), np.arange(n))
+        x1 = x * x_partition_size
+        y1 = y * y_partition_size
+        x2 = x1 + x_partition_size
+        y2 = y1 + y_partition_size
+
+        # check if the bbox overlaps with each partition
+        mask = (bbox_x1 <= x2) & (bbox_x2 >= x1) & (bbox_y1 <= y2) & (bbox_y2 >= y1)
+        # set the corresponding entries in the output grid to 1
+        output_grid[mask] = 1
+        return output_grid
 
 
