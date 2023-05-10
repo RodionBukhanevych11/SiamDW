@@ -1,23 +1,22 @@
 SIAMFC:
   GPUS: '0'
-  PRINT_FREQ: 20
+  PRINT_FREQ: 100
   WORKERS: 4
   OUTPUT_DIR: 'logs'   # log file
-  CHECKPOINT_DIR: 'snapshot'   # checkpoint file
+  CHECKPOINT_DIR: 'test_models/480_360'   # checkpoint file
 
   TRAIN:
     ISTRUE: True   # whether to train
     MODEL: "SiamFCMobileNet"   # SiamFCIncep22, SiamFCNext22, SiamFCMobileNet
     START_EPOCH: 0
     END_EPOCH: 40
-    TEMPLATE_SIZE: 380
-    SEARCH_SIZE: 540
-    STRIDE: 6
-    BATCH: 5
-    PAIRS: 100
-    PRETRAIN: False
+    TEMPLATE_SIZE: 352
+    SEARCH_SIZE: 480
+    STRIDE: 8
+    BATCH: 6
+    PRETRAIN: True
     LR_POLICY: 'log'
-    LR: 0.005
+    LR: 0.01
     LR_END: 0.000005
     MOMENTUM: 0.9
     WEIGHT_DECAY: 0.0001
@@ -34,12 +33,12 @@ SIAMFC:
     DATA: 'CUSTOM_VAL'
     METHOD: 'TPE'
   DATASET:
-    SHIFT: 4
-    SCALE: 0.05
-    COLOR: 1
+    SHIFT: 0
+    SCALE: 0
+    COLOR: 0
     FLIP: 0.3
     BLUR: 0.15
-    ROTATION: 0.1
+    ROTATION: 0
     CUSTOM_TRAIN:
       PATH: '/home/rodion/SiamDW/data/archive_1/images'
       ANNOTATION: '/home/rodion/SiamDW/data/archive_1/train.json'
