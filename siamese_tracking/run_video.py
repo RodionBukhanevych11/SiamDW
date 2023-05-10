@@ -29,7 +29,7 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='PyTorch SiamFC Tracking Test')
     parser.add_argument('--arch', default='SiamFCMobileNet', type=str, help='backbone architecture')
-    parser.add_argument('--resume', default='/home/rodion/SiamDW/snapshot/checkpoint_e14.pth', type=str, help='pretrained model')
+    parser.add_argument('--resume', default='/home/rodion/SiamDW/test_models/480_360/checkpoint_e3.pth', type=str, help='pretrained model')
     parser.add_argument('--video', default='/home/rodion/SiamDW/tests/full.mkv', type=str, help='video file path')
     parser.add_argument('--init_bbox', default=None, help='bbox in the first frame None or [lx, ly, w, h]')
     args = parser.parse_args()
